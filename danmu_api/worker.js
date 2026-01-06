@@ -4,7 +4,7 @@ import { log, formatLogMessage } from './utils/log-util.js'
 import { getRedisCaches, judgeRedisValid } from "./utils/redis-util.js";
 import { cleanupExpiredIPs, findUrlById, getCommentCache, getLocalCaches, judgeLocalCacheValid } from "./utils/cache-util.js";
 import { formatDanmuResponse } from "./utils/danmu-util.js";
-import { getBangumi, getComment, getCommentByUrl, getSegmentComment, matchAnime, searchAnime, searchEpisodes } from "./apis/dandan-api.js";
+import { getBangumi, getComment, getCommentByUrl, getSegmentComment, matchAnime, searchAnime, searchEpisodes, getAnimeByDouban } from "./apis/dandan-api.js";
 import { handleConfig, handleUI, handleLogs, handleClearLogs, handleDeploy, handleClearCache } from "./apis/system-api.js";
 import { handleSetEnv, handleAddEnv, handleDelEnv } from "./apis/env-api.js";
 import { Segment } from "./models/dandan-model.js"
@@ -162,6 +162,11 @@ async function handleRequest(req, env, deployPlatform, clientIp) {
   // GET /api/v2/search/episodes
   if (path === "/api/v2/search/episodes" && method === "GET") {
     return searchEpisodes(url);
+  }
+
+  // GET /api/v2/douban
+  if (path === "/api/v2/douban" && method === "GET") {
+    return getAnimeByDouban(url);
   }
 
   // GET /api/v2/match
