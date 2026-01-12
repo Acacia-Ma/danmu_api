@@ -40,8 +40,7 @@ const apiConfigs = {
         path: '/api/v2/comment/:commentId',
         params: [
             { name: 'commentId', label: '弹幕ID', type: 'text', required: true, placeholder: '示例: 10009' },
-            { name: 'format', label: '格式', type: 'select', required: false, placeholder: '可选: json或xml', options: ['json', 'xml'] },
-            { name: 'segmentflag', label: '分片标志', type: 'select', required: false, placeholder: '可选: true或false', options: ['true', 'false'] }
+            { name: 'format', label: '格式', type: 'select', required: false, placeholder: '可选: json或xml', options: ['json', 'xml'] }
         ]
     },
     getCommentByUrl: {
@@ -50,8 +49,7 @@ const apiConfigs = {
         path: '/api/v2/comment',
         params: [
             { name: 'url', label: '视频URL', type: 'text', required: true, placeholder: '示例: https://www.iqiyi.com/v_27puk4z5uko.html' },
-            { name: 'format', label: '格式', type: 'select', required: false, placeholder: '可选: json或xml', options: ['json', 'xml'] },
-            { name: 'segmentflag', label: '分片标志', type: 'select', required: false, placeholder: '可选: true或false', options: ['true', 'false'] }
+            { name: 'format', label: '格式', type: 'select', required: false, placeholder: '可选: json或xml', options: ['json', 'xml'] }
         ]
     },
     getAnimeByDouban: {
@@ -61,8 +59,7 @@ const apiConfigs = {
         params: [
             { name: 'douban_id', label: '豆瓣ID', type: 'text', required: true, placeholder: '示例: 36382628' },
             { name: 'episode_number', label: '剧集编号', type: 'text', required: false, placeholder: '示例: 1' },
-            { name: 'format', label: '格式', type: 'select', required: false, placeholder: '可选: json或xml', options: ['json', 'xml'] },
-            { name: 'segmentflag', label: '分片标志', type: 'select', required: false, placeholder: '可选: true或false', options: ['true', 'false'] }
+            { name: 'format', label: '格式', type: 'select', required: false, placeholder: '可选: json或xml', options: ['json', 'xml'] }
         ]
     },
     getSegmentComment: {
