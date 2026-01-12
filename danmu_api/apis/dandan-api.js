@@ -1,7 +1,7 @@
-import {globals} from "../configs/globals.js";
-import {getPageTitle, jsonResponse} from "../utils/http-util.js";
-import {log} from "../utils/log-util.js";
-import {setRedisKey, updateRedisCaches} from "../utils/redis-util.js";
+import { globals } from "../configs/globals.js";
+import { getPageTitle, jsonResponse } from "../utils/http-util.js";
+import { log } from "../utils/log-util.js";
+import { setRedisKey, updateRedisCaches } from "../utils/redis-util.js";
 import {
   setCommentCache,
   addAnime,
@@ -18,7 +18,7 @@ import {
   writeCacheToFile,
   updateLocalCaches,
 } from "../utils/cache-util.js";
-import {formatDanmuResponse} from "../utils/danmu-util.js";
+import { formatDanmuResponse } from "../utils/danmu-util.js";
 import {
   extractEpisodeTitle,
   convertChineseNumber,
@@ -27,8 +27,8 @@ import {
   normalizeSpaces,
   extractYear,
 } from "../utils/common-util.js";
-import {getTMDBChineseTitle} from "../utils/tmdb-util.js";
-import {getDoubanDetail} from "../utils/douban-util.js";
+import { getTMDBChineseTitle } from "../utils/tmdb-util.js";
+import { getDoubanDetail } from "../utils/douban-util.js";
 import Kan360Source from "../sources/kan360.js";
 import VodSource from "../sources/vod.js";
 import TmdbSource from "../sources/tmdb.js";
@@ -45,7 +45,12 @@ import BilibiliSource from "../sources/bilibili.js";
 import YoukuSource from "../sources/youku.js";
 import SohuSource from "../sources/sohu.js";
 import OtherSource from "../sources/other.js";
-import {Anime, AnimeMatch, Episodes, Bangumi} from "../models/dandan-model.js";
+import {
+  Anime,
+  AnimeMatch,
+  Episodes,
+  Bangumi,
+} from "../models/dandan-model.js";
 
 // =====================
 // 兼容弹弹play接口
@@ -189,7 +194,7 @@ export async function searchAnime(
       },
     ];
     curAnimes.push(tmpAnime);
-    addAnime(Anime.fromJson({...tmpAnime, links: links}));
+    addAnime(Anime.fromJson({ ...tmpAnime, links: links }));
     if (globals.animes.length > globals.MAX_ANIMES) removeEarliestAnime();
 
     // 如果有新的anime获取到，则更新本地缓存
@@ -430,14 +435,6 @@ function extractEpisodeNumberFromTitle(episodeTitle) {
     return parseInt(underscoreMatch[1], 10);
   }
 
-  // 匹配格式：专访1、彩蛋1（中文后紧跟数字，然后是冒号或结尾）
-  const chineseNumberMatch = episodeTitle.match(
-    /[\u4e00-\u9fa5]+(\d+)(?:[:：]|$)/
-  );
-  if (chineseNumberMatch) {
-    return parseInt(chineseNumberMatch[1], 10);
-  }
-
   // 匹配格式：01、1（纯数字，通常在标题开头或结尾）
   const numberMatch = episodeTitle.match(/(?:^|\s)(\d+)(?:\s|$)/);
   if (numberMatch) {
@@ -624,7 +621,7 @@ async function matchAniAndEp(
       }
     }
   }
-  return {resEpisode, resAnime};
+  return { resEpisode, resAnime };
 }
 
 async function fallbackMatchAniAndEp(
@@ -684,7 +681,7 @@ async function fallbackMatchAniAndEp(
       }
     }
   }
-  return {resEpisode, resAnime};
+  return { resEpisode, resAnime };
 }
 
 export async function extractTitleSeasonEpisode(cleanFileName) {
@@ -774,7 +771,7 @@ export async function extractTitleSeasonEpisode(cleanFileName) {
     episode,
     year,
   });
-  return {title, season, episode, year};
+  return { title, season, episode, year };
 }
 
 // Extracted function for POST /api/v2/match
@@ -787,14 +784,14 @@ export async function matchAnime(url, req) {
     if (!body) {
       log("error", "Request body is empty");
       return jsonResponse(
-        {errorCode: 400, success: false, errorMessage: "Empty request body"},
+        { errorCode: 400, success: false, errorMessage: "Empty request body" },
         400
       );
     }
 
     // 处理请求体中的数据
     // 假设请求体包含一个字段，比如 { query: "anime name" }
-    const {fileName} = body;
+    const { fileName } = body;
     if (!fileName) {
       log("error", "Missing fileName parameter in request body");
       return jsonResponse(
@@ -808,14 +805,14 @@ export async function matchAnime(url, req) {
     }
 
     // 解析fileName，提取平台偏好
-    const {cleanFileName, preferredPlatform} = parseFileName(fileName);
+    const { cleanFileName, preferredPlatform } = parseFileName(fileName);
     log("info", `Processing anime match for query: ${fileName}`);
     log(
       "info",
       `Parsed cleanFileName: ${cleanFileName}, preferredPlatform: ${preferredPlatform}`
     );
 
-    let {title, season, episode, year} = await extractTitleSeasonEpisode(
+    let { title, season, episode, year } = await extractTitleSeasonEpisode(
       cleanFileName
     );
 
@@ -924,7 +921,7 @@ export async function matchAnime(url, req) {
     // 处理 JSON 解析错误或其他异常
     log("error", `Failed to parse request body: ${error.message}`);
     return jsonResponse(
-      {errorCode: 400, success: false, errorMessage: "Invalid JSON body"},
+      { errorCode: 400, success: false, errorMessage: "Invalid JSON body" },
       400
     );
   }
@@ -940,7 +937,11 @@ export async function searchEpisodes(url) {
   if (!anime) {
     log("error", "Missing anime parameter");
     return jsonResponse(
-      {errorCode: 400, success: false, errorMessage: "Missing anime parameter"},
+      {
+        errorCode: 400,
+        success: false,
+        errorMessage: "Missing anime parameter",
+      },
       400
     );
   }
@@ -1152,7 +1153,7 @@ export async function getComment(path, queryFormat, segmentFlag) {
   log("info", "comment platform...", plat);
   if (!url) {
     log("error", `Comment with ID ${commentId} not found`);
-    return jsonResponse({count: 0, comments: []}, 404);
+    return jsonResponse({ count: 0, comments: [] }, 404);
   }
   log("info", `Fetched comment ID: ${commentId}`);
 
@@ -1225,7 +1226,7 @@ export async function getComment(path, queryFormat, segmentFlag) {
     setCommentCache(url, danmus);
   }
 
-  const responseData = {count: danmus.length, comments: danmus, url: url};
+  const responseData = { count: danmus.length, comments: danmus, url: url };
   return formatDanmuResponse(responseData, queryFormat);
 }
 
