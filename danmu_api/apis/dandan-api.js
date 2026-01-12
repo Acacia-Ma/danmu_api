@@ -1455,7 +1455,8 @@ export async function getAnimeByDouban(url) {
   const doubanId = url.searchParams.get("douban_id");
   const episode = url.searchParams.get("episode_number") || "";
   const queryFormat = url.searchParams.get("format");
-  const segmentFlag = url.searchParams.get("segmentflag");
+  const segmentFlagParam = url.searchParams.get("segmentflag");
+  const segmentFlag = segmentFlagParam === "true" || segmentFlagParam === "1";
 
   log("info", `Get anime by douban_id: ${doubanId}, episode: ${episode}`);
 
