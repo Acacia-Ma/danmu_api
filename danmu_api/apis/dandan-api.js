@@ -1664,21 +1664,9 @@ export async function getAnimeByDouban(url) {
       ];
 
       const curAnimes = [];
-
+      resultAnimes = [];
       // 直接调用 doubanSource.handleAnimes 处理
       await doubanSource.handleAnimes(sourceAnimes, data.title, curAnimes);
-
-      if (curAnimes.length === 0) {
-        log("info", "No animes processed from douban source");
-        return jsonResponse({
-          errorCode: 0,
-          success: true,
-          errorMessage: "",
-          hasMore: false,
-          animes: [],
-        });
-      }
-
       // 如果有新的anime获取到，则更新本地缓存
       if (globals.localCacheValid && curAnimes.length !== 0) {
         await updateLocalCaches();
@@ -1687,46 +1675,87 @@ export async function getAnimeByDouban(url) {
       if (globals.redisValid && curAnimes.length !== 0) {
         await updateRedisCaches();
       }
+      if (curAnimes.length === 0) {
+        // 添加兜底，如果豆瓣没搜索到内容，根据构造post body title@platform获取
+        const matchUrlBase = new URL("/api/v2/match", url.origin);
+        const req = new Request(matchUrlBase.toString(), {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({fileName: `${data.title}`}),
+        });
+        const matchUrl = new URL(matchUrlBase);
+        matchUrl.searchParams.set("keyword", data.title);
+        //调用match
+        const res = await matchAnime(matchUrl, req);
+        const resJson = await res.json();
+        if (resJson.success && resJson.matches.length > 0) {
+          const tmpAnimeData = resJson.matches[0];
+          //调用getBangumi
+          const path = `/api/v2/bangumi/${tmpAnimeData.animeId}`;
+          const bangumiUrl = new URL(path, url.origin);
+          const bangumiRes = await getBangumi(bangumiUrl.pathname);
+          const bangumiData = await bangumiRes.json();
+          if (
+            bangumiData.success &&
+            bangumiData.bangumi &&
+            bangumiData.bangumi.episodes
+          ) {
+            const allEpisodes = bangumiData.bangumi.episodes;
+            if (allEpisodes.length > 0) {
+              resultAnimes.push(
+                Episodes.fromJson({
+                  animeId: tmpAnimeData.animeId,
+                  animeTitle: tmpAnimeData.animeTitle,
+                  type: tmpAnimeData.type,
+                  typeDescription: tmpAnimeData.typeDescription,
+                  episodes: allEpisodes.map((ep) => ({
+                    episodeId: ep.episodeId,
+                    episodeTitle: ep.episodeTitle,
+                    episodeNumber: ep.episodeNumber,
+                  })),
+                }),
+              );
+            }
+          }
+        }
+      } else {
+        // 遍历所有找到的动漫，获取它们的集数信息
+        for (const animeItem of curAnimes) {
+          const bangumiUrl = new URL(
+            `/bangumi/${animeItem.bangumiId}`,
+            url.origin,
+          );
+          const bangumiRes = await getBangumi(bangumiUrl.pathname);
+          const bangumiData = await bangumiRes.json();
 
-      resultAnimes = [];
+          if (
+            bangumiData.success &&
+            bangumiData.bangumi &&
+            bangumiData.bangumi.episodes
+          ) {
+            // 不做任何过滤，保留所有 episodes（包含所有 URL）
+            const allEpisodes = bangumiData.bangumi.episodes;
 
-      // 遍历所有找到的动漫，获取它们的集数信息
-      for (const animeItem of curAnimes) {
-        const bangumiUrl = new URL(
-          `/bangumi/${animeItem.bangumiId}`,
-          url.origin,
-        );
-        const bangumiRes = await getBangumi(bangumiUrl.pathname);
-        const bangumiData = await bangumiRes.json();
-
-        if (
-          bangumiData.success &&
-          bangumiData.bangumi &&
-          bangumiData.bangumi.episodes
-        ) {
-          // 不做任何过滤，保留所有 episodes（包含所有 URL）
-          const allEpisodes = bangumiData.bangumi.episodes;
-
-          if (allEpisodes.length > 0) {
-            resultAnimes.push(
-              Episodes.fromJson({
-                animeId: animeItem.animeId,
-                animeTitle: animeItem.animeTitle,
-                type: animeItem.type,
-                typeDescription: animeItem.typeDescription,
-                episodes: allEpisodes.map((ep) => ({
-                  episodeId: ep.episodeId,
-                  episodeTitle: ep.episodeTitle,
-                  episodeNumber: ep.episodeNumber,
-                })),
-              }),
-            );
+            if (allEpisodes.length > 0) {
+              resultAnimes.push(
+                Episodes.fromJson({
+                  animeId: animeItem.animeId,
+                  animeTitle: animeItem.animeTitle,
+                  type: animeItem.type,
+                  typeDescription: animeItem.typeDescription,
+                  episodes: allEpisodes.map((ep) => ({
+                    episodeId: ep.episodeId,
+                    episodeTitle: ep.episodeTitle,
+                    episodeNumber: ep.episodeNumber,
+                  })),
+                }),
+              );
+            }
           }
         }
       }
-
       log("info", `Found ${resultAnimes.length} animes with episodes`);
-
+      //console.log(JSON.stringify(resultAnimes));
       // 缓存结果（包含所有 episodes 和 URLs）
       if (resultAnimes.length > 0) {
         setSearchCache(cacheKey, resultAnimes);
