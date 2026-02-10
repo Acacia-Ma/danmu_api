@@ -18,6 +18,7 @@ import {
   matchAnime,
   searchAnime,
   searchEpisodes,
+  getAnimeByDouban,
 } from "./apis/dandan-api.js";
 import {
   handleConfig,
