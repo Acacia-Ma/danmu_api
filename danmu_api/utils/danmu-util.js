@@ -1,7 +1,7 @@
-import {globals} from "../configs/globals.js";
-import {log} from "./log-util.js";
-import {jsonResponse, xmlResponse} from "./http-util.js";
-import {traditionalized} from "./zh-util.js";
+import { globals } from "../configs/globals.js";
+import { log } from "./log-util.js";
+import { jsonResponse, xmlResponse } from "./http-util.js";
+import { traditionalized } from "./zh-util.js";
 
 // =====================
 // danmu处理相关函数
@@ -58,7 +58,7 @@ export function groupDanmusByMinute(filteredDanmus, n) {
     }
 
     // 添加到对应分组
-    acc[groupKey].push({...danmu, t: time});
+    acc[groupKey].push({ ...danmu, t: time });
     return acc;
   }, {});
 
@@ -75,11 +75,14 @@ export function groupDanmusByMinute(filteredDanmus, n) {
           earliestT: danmu.t,
           cid: danmu.cid,
           p: danmu.p,
+          like: 0  // 初始化like字段
         };
       }
       acc[message].count += 1;
       // 更新最早时间
       acc[message].earliestT = Math.min(acc[message].earliestT, danmu.t);
+      // 合并like字段，如果是undefined则视为0
+      acc[message].like += (danmu.like !== undefined ? danmu.like : 0);
       return acc;
     }, {});
 
@@ -96,14 +99,64 @@ export function groupDanmusByMinute(filteredDanmus, n) {
         cid: data.cid,
         p: data.p,
         // 仅当计算后的逻辑计数大于1时才显示 "x N"
-        m: displayCount > 1 ? `${message} x ${displayCount}` : message,
+        m: displayCount > 1 ? `${message}\u200Ax\u200A${displayCount}` : message,
         t: data.earliestT,
+        like: data.like // 包含合并后的like字段
       };
     });
   });
 
   // 展平结果并按时间排序
   return result.flat().sort((a, b) => a.t - b.t);
+}
+
+/**
+ * 处理弹幕的点赞数显示
+ * @param {Array} groupedDanmus 弹幕列表
+ * @returns {Array} 处理后的弹幕列表
+ */
+export function handleDanmusLike(groupedDanmus) {
+  if (!globals.likeSwitch) {
+    return groupedDanmus;
+  }
+  return groupedDanmus.map(item => {
+    // 如果item没有like字段或者like值小于5，则不处理
+    if (!item.like || item.like < 5) {
+      return item;
+    }
+
+    // 获取弹幕来源信息，判断是否为需要特殊处理的源（低阈值）
+    const lowThresholdSources = ['[hanjutv]', '[sohu]', '[bilibili1]', '[migu]'];
+    const isLowThresholdSource = lowThresholdSources.some(source => item.p.includes(source));
+
+    // 确定阈值：特定源中>=100用🔥，其他>=1000用🔥
+    const threshold = isLowThresholdSource ? 100 : 1000;
+    const icon = item.like >= threshold ? '🔥' : '️♡';
+
+    // 格式化点赞数，缩写显示
+    let formattedLike;
+    if (item.like >= 10000) {
+      // 万级别，如 1.2w
+      formattedLike = (item.like / 10000).toFixed(1) + 'w';
+    } else if (item.like >= 1000) {
+      // 千级别，如 1.2k
+      formattedLike = (item.like / 1000).toFixed(1) + 'k';
+    } else {
+      // 百级别及以下，直接显示数字
+      formattedLike = item.like.toString();
+    }
+
+    // 在弹幕内容m字段后面添加点赞信息
+    const likeText = `\u200A${icon}${formattedLike}`;
+    const newM = item.m + likeText;
+
+    // 创建新对象，复制原属性，更新m字段，并删除like字段
+    const { like, ...rest } = item;
+    return {
+      ...rest,
+      m: newM
+    };
+  });
 }
 
 export function limitDanmusByCount(filteredDanmus, danmuLimit) {
@@ -151,7 +204,7 @@ export function convertToDanmakuJson(contents, platform) {
     );
   } else if (contents && Array.isArray(contents.danmuku)) {
     // 处理 danmuku 数组，映射为对象格式
-    const typeMap = {right: 1, top: 4, bottom: 5};
+    const typeMap = { right: 1, top: 4, bottom: 5 };
     const hexToDecimal = (hex) =>
       hex ? parseInt(hex.replace("#", ""), 16) : 16777215;
     items = contents.danmuku.map((item) => ({
@@ -216,7 +269,7 @@ export function convertToDanmakuJson(contents, platform) {
 
     attributes = [time, mode, color, `[${platform}]`].join(",");
 
-    danmus.push({p: attributes, m, cid: cidCounter++});
+    danmus.push({ p: attributes, m, cid: cidCounter++, like: item?.like });
   }
 
   // 切割字符串成正则表达式数组
@@ -257,13 +310,12 @@ export function convertToDanmakuJson(contents, platform) {
     globals.groupMinute,
   );
 
+  // 处理点赞数
+  const likeDanmus = handleDanmusLike(groupedDanmus);
+
   // 应用弹幕转换规则（在去重和限制弹幕数之后）
-  let convertedDanmus = limitDanmusByCount(groupedDanmus, globals.danmuLimit);
-  if (
-    globals.convertTopBottomToScroll ||
-    globals.convertColor === "white" ||
-    globals.convertColor === "color"
-  ) {
+  let convertedDanmus = limitDanmusByCount(likeDanmus, globals.danmuLimit);
+  if (globals.convertTopBottomToScroll || globals.convertColor === 'white' || globals.convertColor === 'color') {
     let topBottomCount = 0;
     let colorCount = 0;
 
@@ -308,7 +360,7 @@ export function convertToDanmakuJson(contents, platform) {
 
       if (modified) {
         const newP = [pValues[0], mode, color, ...pValues.slice(3)].join(",");
-        return {...danmu, p: newP};
+        return { ...danmu, p: newP };
       }
       return danmu;
     });
